@@ -1,1 +1,509 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>คำนวณอายุคงเหลือสินค้า</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap');
 
+:root{
+  --paper:#EAF2F8;
+  --paper-2:#DCEAF4;
+  --ink:#1E2C38;
+  --muted:#6C8299;
+  --line:#BBD3E6;
+  --pass:#2F6E4F;
+  --pass-bg:#DCEDE3;
+  --fail:#AE3A2C;
+  --fail-bg:#F3E1DC;
+  --warn:#9B7A1F;
+  --warn-bg:#F1E7CE;
+}
+
+*{box-sizing:border-box;}
+
+body{
+  margin:0;
+  background:var(--paper);
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(30,44,56,0.06) 1px, transparent 0);
+  background-size: 18px 18px;
+  font-family:'IBM Plex Sans Thai','IBM Plex Mono',sans-serif;
+  color:var(--ink);
+  display:flex;
+  justify-content:center;
+  padding:36px 16px 60px;
+}
+
+.ticket{
+  width:100%;
+  max-width:560px;
+  background:var(--paper-2);
+  border:1px solid var(--line);
+  border-radius:2px;
+  box-shadow: 0 1px 0 rgba(34,40,31,0.05), 0 12px 30px -18px rgba(34,40,31,0.35);
+  position:relative;
+  overflow:hidden;
+}
+
+.ticket::before, .ticket::after{
+  content:"";
+  position:absolute;
+  width:22px;height:22px;
+  background:var(--paper);
+  border-radius:50%;
+  top:50%;
+  transform:translateY(-50%);
+}
+.ticket::before{ left:-11px; }
+.ticket::after{ right:-11px; }
+
+.perf{
+  position:absolute;
+  top:0; bottom:0;
+  left:0; right:0;
+  pointer-events:none;
+}
+
+.head{
+  padding:26px 30px 20px;
+  border-bottom:1.5px dashed var(--line);
+}
+.eyebrow{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:11px;
+  letter-spacing:.18em;
+  color:var(--muted);
+  text-transform:uppercase;
+}
+.title{
+  font-family:'Archivo Narrow',sans-serif;
+  font-weight:700;
+  font-size:28px;
+  letter-spacing:.01em;
+  margin:4px 0 2px;
+}
+.subtitle{
+  font-size:13px;
+  color:var(--muted);
+}
+
+.body{
+  padding:22px 30px 6px;
+}
+
+.mode-toggle{
+  margin-bottom:20px;
+  padding:10px 12px;
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:2px;
+}
+.mode-toggle .check{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  font-size:13px;
+  color:var(--ink);
+  cursor:pointer;
+}
+.mode-toggle .check input{
+  width:16px;
+  height:16px;
+  accent-color:var(--ink);
+  cursor:pointer;
+}
+
+.field{
+  margin-bottom:16px;
+}
+.field label{
+  display:block;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:11px;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:6px;
+}
+.field input[type=date]{
+  width:100%;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:16px;
+  padding:10px 12px;
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:2px;
+  color:var(--ink);
+}
+.field input[type=date]:focus{
+  outline:2px solid var(--ink);
+  outline-offset:1px;
+}
+
+.row2{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+}
+
+.threshold-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-top:2px;
+  margin-bottom:20px;
+}
+.threshold-row label{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:11px;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--muted);
+  white-space:nowrap;
+}
+.threshold-row input[type=number]{
+  width:70px;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:15px;
+  padding:8px 10px;
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:2px;
+  color:var(--ink);
+}
+
+.result{
+  margin:0 30px 26px;
+  border-top:1.5px dashed var(--line);
+  padding-top:20px;
+}
+
+.stat-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:1px;
+  background:var(--line);
+  border:1px solid var(--line);
+  margin-bottom:18px;
+}
+.stat{
+  background:var(--paper-2);
+  padding:12px 10px;
+  text-align:center;
+}
+.stat .num{
+  font-family:'IBM Plex Mono',monospace;
+  font-weight:600;
+  font-size:20px;
+}
+.stat .lbl{
+  font-size:10.5px;
+  color:var(--muted);
+  margin-top:3px;
+  letter-spacing:.02em;
+}
+
+.stamp-wrap{
+  display:flex;
+  justify-content:center;
+  padding:6px 0 10px;
+}
+.stamp{
+  font-family:'Archivo Narrow',sans-serif;
+  font-weight:700;
+  font-size:22px;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  padding:10px 26px;
+  border:3px solid currentColor;
+  border-radius:6px;
+  transform:rotate(-4deg);
+  display:inline-flex;
+  flex-direction:column;
+  align-items:center;
+  line-height:1.15;
+  position:relative;
+}
+.stamp .sub{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:11px;
+  font-weight:500;
+  letter-spacing:.12em;
+  margin-top:2px;
+}
+.stamp.pass{ color:var(--pass); background:var(--pass-bg); }
+.stamp.fail{ color:var(--fail); background:var(--fail-bg); }
+.stamp.idle{ color:var(--muted); background:transparent; border-style:dashed; transform:rotate(0deg); }
+
+.note{
+  text-align:center;
+  font-size:12.5px;
+  color:var(--muted);
+  margin-top:4px;
+  line-height:1.6;
+}
+.note b{ color:var(--ink); }
+
+.foot{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:10px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--muted);
+  text-align:center;
+  padding:12px 20px 20px;
+  border-top:1px dashed var(--line);
+}
+
+@media (max-width:420px){
+  .row2{ grid-template-columns:1fr; }
+  .stat-grid{ grid-template-columns:1fr; }
+  .title{ font-size:24px; }
+}
+</style>
+</head>
+<body>
+
+<div class="ticket">
+  <div class="head">
+    <div class="eyebrow">Shelf-life inspection ticket</div>
+    <div class="title">คำนวณอายุคงเหลือสินค้า</div>
+    <div class="subtitle">กรอกวันผลิต วันหมดอายุ และวันที่รับสินค้า เพื่อตรวจอายุคงเหลือ</div>
+  </div>
+
+  <div class="body">
+    <div class="mode-toggle">
+      <label class="check">
+        <input type="checkbox" id="noMfg">
+        <span>ไม่มีวันที่ผลิต (ใช้เกณฑ์จำนวนวันคงเหลือแทน)</span>
+      </label>
+    </div>
+
+    <div class="row2" id="mfgRow">
+      <div class="field">
+        <label for="mfg">วันที่ผลิต</label>
+        <input type="date" id="mfg">
+      </div>
+      <div class="field">
+        <label for="exp">วันหมดอายุ</label>
+        <input type="date" id="exp">
+      </div>
+    </div>
+
+    <div class="field" id="expOnlyRow" style="display:none;">
+      <label for="exp2">วันหมดอายุ</label>
+      <input type="date" id="exp2">
+    </div>
+
+    <div class="field">
+      <label for="recv">วันที่รับสินค้า</label>
+      <input type="date" id="recv">
+    </div>
+
+    <div class="threshold-row" id="pctThresholdRow">
+      <label for="threshold">เกณฑ์อายุคงเหลือขั้นต่ำ (%)</label>
+      <input type="number" id="threshold" value="70" min="0" max="100" step="1">
+    </div>
+
+    <div class="threshold-row" id="daysThresholdRow" style="display:none;">
+      <label for="thresholdDays">เกณฑ์คงเหลือขั้นต่ำ (วัน)</label>
+      <input type="number" id="thresholdDays" value="180" min="0" step="1">
+    </div>
+  </div>
+
+  <div class="result">
+    <div class="stat-grid">
+      <div class="stat">
+        <div class="num" id="totalDays">–</div>
+        <div class="lbl">อายุรวม (วัน)</div>
+      </div>
+      <div class="stat">
+        <div class="num" id="remainDays">–</div>
+        <div class="lbl">คงเหลือ (วัน)</div>
+      </div>
+      <div class="stat">
+        <div class="num" id="remainPct">–</div>
+        <div class="lbl">คงเหลือ (%)</div>
+      </div>
+    </div>
+
+    <div class="stamp-wrap">
+      <div class="stamp idle" id="stamp">
+        รอข้อมูล
+        <span class="sub">ENTER DATES</span>
+      </div>
+    </div>
+    <div class="note" id="note">กรอกวันที่ให้ครบเพื่อเริ่มคำนวณ</div>
+  </div>
+
+  <div class="foot">รับได้เมื่ออายุคงเหลือ ≥ เกณฑ์ที่กำหนด</div>
+</div>
+
+<script>
+const noMfgEl = document.getElementById('noMfg');
+const mfgRow = document.getElementById('mfgRow');
+const expOnlyRow = document.getElementById('expOnlyRow');
+const pctThresholdRow = document.getElementById('pctThresholdRow');
+const daysThresholdRow = document.getElementById('daysThresholdRow');
+
+const mfgEl = document.getElementById('mfg');
+const expEl = document.getElementById('exp');
+const exp2El = document.getElementById('exp2');
+const recvEl = document.getElementById('recv');
+const thEl = document.getElementById('threshold');
+const thDaysEl = document.getElementById('thresholdDays');
+
+const totalDaysEl = document.getElementById('totalDays');
+const remainDaysEl = document.getElementById('remainDays');
+const remainPctEl = document.getElementById('remainPct');
+const statGrid = document.querySelector('.stat-grid');
+const stampEl = document.getElementById('stamp');
+const noteEl = document.getElementById('note');
+
+// default received date = today
+const today = new Date();
+recvEl.value = today.toISOString().slice(0,10);
+
+function parseDate(v){
+  if(!v) return null;
+  const d = new Date(v + 'T00:00:00');
+  return isNaN(d) ? null : d;
+}
+function daysBetween(a,b){
+  return Math.round((b-a)/86400000);
+}
+
+function toggleMode(){
+  const noMfg = noMfgEl.checked;
+  mfgRow.style.display = noMfg ? 'none' : 'grid';
+  expOnlyRow.style.display = noMfg ? 'block' : 'none';
+  pctThresholdRow.style.display = noMfg ? 'none' : 'flex';
+  daysThresholdRow.style.display = noMfg ? 'flex' : 'none';
+  statGrid.style.gridTemplateColumns = noMfg ? '1fr' : '1fr 1fr 1fr';
+  document.getElementById('totalDays').parentElement.style.display = noMfg ? 'none' : 'block';
+  document.getElementById('remainPct').parentElement.style.display = noMfg ? 'none' : 'block';
+  calc();
+}
+
+function calc(){
+  if(noMfgEl.checked){
+    calcNoMfg();
+  } else {
+    calcWithMfg();
+  }
+}
+
+function calcWithMfg(){
+  const mfg = parseDate(mfgEl.value);
+  const exp = parseDate(expEl.value);
+  const recv = parseDate(recvEl.value);
+  const threshold = parseFloat(thEl.value);
+
+  if(!mfg || !exp){
+    reset('กรอกวันที่ให้ครบเพื่อเริ่มคำนวณ');
+    return;
+  }
+  if(exp <= mfg){
+    reset('วันหมดอายุต้องอยู่หลังวันที่ผลิต', true);
+    return;
+  }
+
+  const totalDays = daysBetween(mfg, exp);
+
+  if(!recv){
+    totalDaysEl.textContent = totalDays;
+    remainDaysEl.textContent = '–';
+    remainPctEl.textContent = '–';
+    setStamp('idle', 'รอวันรับสินค้า', 'ENTER RECEIVE DATE');
+    noteEl.innerHTML = `อายุรวมสินค้า <b>${totalDays} วัน</b> — กรอกวันที่รับสินค้าเพื่อคำนวณอายุคงเหลือ`;
+    return;
+  }
+
+  let remainDays = daysBetween(recv, exp);
+  const remainPct = (remainDays / totalDays) * 100;
+  const remainPctClamped = Math.max(0, remainPct);
+
+  totalDaysEl.textContent = totalDays;
+  remainDaysEl.textContent = remainDays;
+  remainPctEl.textContent = remainPctClamped.toFixed(1) + '%';
+
+  if(remainDays <= 0){
+    setStamp('fail', 'หมดอายุแล้ว', 'EXPIRED');
+    noteEl.innerHTML = `สินค้าหมดอายุไปแล้ว ${Math.abs(remainDays)} วัน นับจากวันรับ`;
+    return;
+  }
+
+  if(isNaN(threshold)){
+    setStamp('idle', 'กรอกเกณฑ์ %', 'SET THRESHOLD');
+    noteEl.textContent = 'กรอกเกณฑ์อายุคงเหลือขั้นต่ำเพื่อตัดสินผล';
+    return;
+  }
+
+  if(remainPct >= threshold){
+    setStamp('pass', 'ผ่านเกณฑ์', `≥ ${threshold}% REMAINING`);
+    noteEl.innerHTML = `อายุคงเหลือ <b>${remainPctClamped.toFixed(1)}%</b> (${remainDays} วัน) ผ่านเกณฑ์ขั้นต่ำ ${threshold}% — รับสินค้าได้`;
+  } else {
+    setStamp('fail', 'ไม่ผ่านเกณฑ์', `< ${threshold}% REMAINING`);
+    noteEl.innerHTML = `อายุคงเหลือ <b>${remainPctClamped.toFixed(1)}%</b> (${remainDays} วัน) ต่ำกว่าเกณฑ์ขั้นต่ำ ${threshold}% — ไม่ควรรับสินค้า`;
+  }
+}
+
+function calcNoMfg(){
+  const exp = parseDate(exp2El.value);
+  const recv = parseDate(recvEl.value);
+  const thresholdDays = parseFloat(thDaysEl.value);
+
+  if(!exp){
+    reset('กรอกวันหมดอายุเพื่อเริ่มคำนวณ');
+    return;
+  }
+  if(!recv){
+    reset('กรอกวันที่รับสินค้าเพื่อคำนวณอายุคงเหลือ');
+    return;
+  }
+
+  const remainDays = daysBetween(recv, exp);
+  remainDaysEl.textContent = remainDays;
+
+  if(remainDays <= 0){
+    setStamp('fail', 'หมดอายุแล้ว', 'EXPIRED');
+    noteEl.innerHTML = `สินค้าหมดอายุไปแล้ว ${Math.abs(remainDays)} วัน นับจากวันรับ`;
+    return;
+  }
+
+  if(isNaN(thresholdDays)){
+    setStamp('idle', 'กรอกเกณฑ์วัน', 'SET THRESHOLD');
+    noteEl.textContent = 'กรอกเกณฑ์คงเหลือขั้นต่ำ (วัน) เพื่อตัดสินผล';
+    return;
+  }
+
+  if(remainDays >= thresholdDays){
+    setStamp('pass', 'ผ่านเกณฑ์', `≥ ${thresholdDays} DAYS LEFT`);
+    noteEl.innerHTML = `ไม่มีวันที่ผลิต — อายุคงเหลือ <b>${remainDays} วัน</b> ไม่ต่ำกว่าเกณฑ์ ${thresholdDays} วัน — รับสินค้าได้`;
+  } else {
+    setStamp('fail', 'ไม่ผ่านเกณฑ์', `< ${thresholdDays} DAYS LEFT`);
+    noteEl.innerHTML = `ไม่มีวันที่ผลิต — อายุคงเหลือ <b>${remainDays} วัน</b> ต่ำกว่าเกณฑ์ ${thresholdDays} วัน — ไม่ควรรับสินค้า`;
+  }
+}
+
+function setStamp(cls, text, sub){
+  stampEl.className = 'stamp ' + cls;
+  stampEl.innerHTML = text + '<span class="sub">' + sub + '</span>';
+}
+
+function reset(msg, isError){
+  totalDaysEl.textContent = '–';
+  remainDaysEl.textContent = '–';
+  remainPctEl.textContent = '–';
+  setStamp('idle', isError ? 'ข้อมูลผิดพลาด' : 'รอข้อมูล', isError ? 'CHECK DATES' : 'ENTER DATES');
+  noteEl.textContent = msg;
+}
+
+noMfgEl.addEventListener('change', toggleMode);
+[mfgEl, expEl, exp2El, recvEl, thEl, thDaysEl].forEach(el => el.addEventListener('input', calc));
+calc();
+</script>
+
+</body>
+</html>
